@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+  <head>
+		<title>Χάρτης Διαδρομών</title>
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+	</style>
+
+
+	<script src="https://www.gstatic.com/firebasejs/4.13.0/firebase.js"></script>
+	<script>
+		// Initialize Firebase
+		var config = {
+		apiKey: "AIzaSyBtUhHZNx26FIKG3MmDXT48PrYK-adHSFI",
+		authDomain: "webmap-be750.firebaseapp.com",
+		databaseURL: "https://webmap-be750.firebaseio.com",
+		projectId: "webmap-be750",
+		storageBucket: "webmap-be750.appspot.com",
+		messagingSenderId: "924376258360"
+		};
+		firebase.initializeApp(config);
+	</script>
+
+	<script type="text/javascript" src="./js/jquery.min.js"></script>
+	<script type="text/javascript" src="./js/jquery.raty.js"></script>
+	<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA2rnnvCXeIwV1eYpC2GZHbPSVQk3X6L7k&libraries=drawing"></script>
+	<script type="text/javascript">
+	$(document).ready(function() {
+
+	var mapCenter = new google.maps.LatLng(47.6145, -122.3418); //Google map Coordinates
+	var map;
+	
+	map_initialize();
+
+		/**
+		* Data object to be written to Firebase.
+		*/
+		var data = {
+			coordinates: null,
+			createdByUser: null,
+			createdByUserID: null,
+			desciption: null,
+			name: null,					
+			ratingsCount:null,
+			totalRating:null,
+			type: null
+		};
+		var database = firebase.database();
+		var infoContentReviewOther =  							$('<div class="polyline-info-win">'+
+																	'<link rel="stylesheet" href="./lib/style.css">'+
+																	'<link rel="stylesheet" href="./lib/normalize.min.css">'+
+																	'<link rel="stylesheet" href="./lib/font-awesome.min.css">'+
+																	'<script  src="./js/jquery.min.js"></'+'script>'+
+																	'<script  src="./js/info.js"></'+'script>'+
+																	'<header>'+
+		 															'<h2>Αξιολόγηση Διαδρομής</h2>'+
+																	'<p>Παρακαλώ Αξιολογήστε την επιλεγμένη διαδρομή.</p>'+
+																	'</header>'+
+																	'<div class="rateit"'+
+ 													                ' data-rateit-value=0"'+
+																	'" data-rateit-ispreset="true" data-rateit-readonly="true"'+
+              														' id="info"></div>'+
+																	'<div class="success-box">'+
+																	'<div class="clearfix"></div>'+
+																	'<img alt="tick image" width="32" src="./lib/check.png"/>'+
+																	'<div id="text-message"></div>'+
+																	'<div class="clearfix"></div>'+
+																	'</div>'+
+																	'<button name="submitChanges" class="submitChanges" title="submitChanges">Εντάξει</butoon>'+
+																	'<br />'+
+																	'</div>'+
+																	'</div>');
+
+
+		var infocontentReviewMine = $('<div class="polyline-info-win">'+
+																	'<link rel="stylesheet" href="./lib/style.css">'+
+																	'<link rel="stylesheet" href="./lib/normalize.min.css">'+
+																	'<link rel="stylesheet" href="./lib/font-awesome.min.css">'+
+																	'<script  src="./js/jquery.min.js"></'+'script>'+
+																	'<script  src="./js/info.js"></'+'script>'+
+																	'<header>'+
+		 															'<h2>Αξιολόγηση Διαδρομής</h2>'+
+																	'<p>Παρακαλώ Αξιολογήστε την επιλεγμένη διαδρομή.</p>'+
+																	'</header>'+
+																	'<div class="rateit"'+
+ 													                ' data-rateit-value=0"'+
+																	'" data-rateit-ispreset="true" data-rateit-readonly="true"'+
+              														' id="info"></div>'+
+																	'<div class="success-box">'+
+																	'<div class="clearfix"></div>'+
+																	'<img alt="tick image" width="32" src="./lib/check.png"/>'+
+																	'<div id="text-message"></div>'+
+																	'<div class="clearfix"></div>'+
+																	'</div>'+
+																	'<button name="submitChanges" class="submitChanges" title="submitChanges">Εντάξει</butoon>'+
+																	'<br />'+
+																	'</div>'+
+																	'</div>');
+
+
+	function CenterControl(controlDiv, map) {
+
+		// Set CSS for the control border.
+		var controlUI = document.createElement('div');
+		controlUI.style.backgroundColor = '#fff';
+		controlUI.style.border = '2px solid #fff';
+		controlUI.style.borderRadius = '3px';
+		controlUI.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
+		controlUI.style.cursor = 'pointer';
+		controlUI.style.marginBottom = '22px';
+		controlUI.style.marginTop = '15px';
+		controlUI.style.textAlign = 'center';
+		controlUI.title = 'Click για άνοιγμα αποτελεσμάτων';
+		controlDiv.appendChild(controlUI);
+
+		// Set CSS for the control interior.
+		var controlText = document.createElement('div');
+		controlText.style.color = 'rgb(25,25,25)';
+		controlText.style.fontFamily = 'Roboto,Arial,sans-serif';
+		controlText.style.fontSize = '16px';
+		controlText.style.lineHeight = '38px';
+		controlText.style.paddingLeft = '5px';
+		controlText.style.paddingRight = '5px';
+		controlText.innerHTML = 'Αναλυτικά Αποτελέσματα';
+		controlUI.appendChild(controlText);
+
+		// Setup the click event listeners: simply set the map to Chicago.
+		controlUI.addEventListener('click', function() {
+		  self.location="score.html";
+		});
+
+	}
+
+	function CenterControlB(controlDivΒ, map) {
+
+		// Set CSS for the control border.
+		var controlUI = document.createElement('div');
+		controlUI.style.backgroundColor = '#fff';
+		controlUI.style.border = '2px solid #fff';
+		controlUI.style.borderRadius = '3px';
+		controlUI.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
+		controlUI.style.cursor = 'pointer';
+		controlUI.style.marginBottom = '22px';
+		controlUI.style.marginTop = '15px';
+		controlUI.style.textAlign = 'center';
+		controlUI.title = 'Click για εύρεση της τοποθεσίας';
+		controlDivΒ.appendChild(controlUI);
+
+		// Set CSS for the control interior.
+		var controlText = document.createElement('div');
+		controlText.style.color = 'rgb(25,25,25)';
+		controlText.style.fontFamily = 'Roboto,Arial,sans-serif';
+		controlText.style.fontSize = '16px';
+		controlText.style.lineHeight = '38px';
+		controlText.style.paddingLeft = '5px';
+		controlText.style.paddingRight = '5px';
+		controlText.innerHTML = 'Η Τοποθεσία μου';
+		controlText.id = 'my_location'
+		controlUI.appendChild(controlText);
+
+		// Setup the click event listeners: simply set the map to Chicago.
+		controlUI.addEventListener('click', function() {
+				my_location();
+
+			function my_location(){ //user click on button
+					if ("geolocation" in navigator){
+									navigator.geolocation.getCurrentPosition(show_location, show_error, {timeout:5000, enableHighAccuracy: true}); //position request
+							}else{
+									console.log("Ο φυλλομετρητης σας δεν υποστηριζει την λειτουργια εντοπισμού");
+					}
+			};
+
+
+			//Success Callback
+			function show_location(position){
+					infoWindow = new google.maps.InfoWindow({map: map});
+					var pos = {lat: position.coords.latitude, lng: position.coords.longitude};
+					infoWindow.setPosition(pos);
+					infoWindow.setContent('Η τοποθεσία σας βρέθηκε');
+					map.setCenter(pos);
+			}
+
+			//Error Callback
+			function show_error(error){
+				switch(error.code) {
+							case error.PERMISSION_DENIED:
+									alert("Δεν έχουν δοθεί δικαιώματα απο τον χρήστη.");
+									break;
+							case error.POSITION_UNAVAILABLE:
+									alert("Η τοποθεσία δεν είναι γνωστή.");
+									break;
+							case error.TIMEOUT:
+									alert("Τελος χρονικού περιθωρίου. Κάντε ανανέωση!");
+									break;
+							case error.UNKNOWN_ERROR:
+									alert("Άγνωστο πρόβλημα.");
+									break;
+					}
+			}
+		});
+		}
+	
+  var infoWindow;
+	function map_initialize()
+	{
+			var googleMapOptions = 
+			{ 
+				center: mapCenter, // map center
+				zoom: 10, //zoom level, 0 = earth view to higher value
+				maxZoom: 20,
+				minZoom: 10,
+				zoomControlOptions: {
+				style: google.maps.ZoomControlStyle.SMALL //zoom control size
+			},
+				scaleControl: true, // enable scale control
+				mapTypeId: google.maps.MapTypeId.ROADMAP // google map type
+			};
+		
+		  	map = new google.maps.Map(document.getElementById("map"), googleMapOptions);
+			infoWindow = new google.maps.InfoWindow;
+
+			google.maps.event.addListener(infoWindow, 'domready', function() {
+       			 //$("#info").rateit(); //HERE IS THE TRICK (CALL RATEIT AGAIN)
+					$("#info").raty({
+						   // starOff: './lib/star-off.png',
+  							//starOn: './lib/star-on.png',
+						size      : 24,
+						starHalf  : 'star-half-big.png',
+						starOff   : 'star-off-big.png',
+						starOn    : 'star-on-big.png',
+						hints:       ['Πολύ κακή διαδρομή', 'Κακή διαδρομή', 'Μέτρια διαδρομή', 'Καλή διαδρομή', 'Πολύ Καλή διαδρομή'],
+						halfShow : true,
+						half: true,
+						precision  : true,
+						round : { down: .25, full: .6, up: .76 },
+						click: function(score, evt) {
+    						alert('ID: ' + this.id + "\nscore: " + score + "\nevent: " + evt);
+  						},
+						target : '#text-message',
+						targetKeep : true,
+						path: './lib' 
+						});
+    		});
+		
+	google.maps.event.addListenerOnce(map, 'tilesloaded', function(){
+	//read all records from db
+		var user = firebase.auth().currentUser;
+		if (user != null) {
+			user.providerData.forEach(function (profile) {
+			console.log(" Sign-in provider: " + profile.providerId);
+			console.log(" Provider-specific UID: " + profile.uid);
+			console.log(" Name: " + profile.displayName);
+			console.log(" Email: " + profile.email);
+			console.log(" Photo URL: " + profile.photoURL);
+			});
+		}
+		//alert(infoContentReviewOther[0]);
+		var ref = firebase.database().ref('StreetMarker/Paths');
+		ref.once('value', function(snapshot) {
+			snapshot.forEach(function(childSnapshot) {
+				var childKey = childSnapshot.key;
+				var childData = childSnapshot.val();
+				//for every record draw polyline
+				var convertedStreet = [];
+				var arr = childData.coordinates.replace(/\(|\)/g, "").split(',');
+				var bounds = new google.maps.LatLngBounds();
+				for(var i=0;i < arr.length;i=i+2) {
+					var point =new google.maps.LatLng(arr[i],arr[i+1]);
+					convertedStreet.push(point);
+					bounds.extend(convertedStreet[i/2]);
+				}
+				var polyline = new google.maps.Polyline({
+					path: convertedStreet,
+					geodesic: false,
+					strokeColor: '#FF0000',
+					strokeOpacity: 1.0,
+					strokeWeight: 2
+				});
+    
+				google.maps.event.addListener(polyline, 'click', function(e){
+						infoWindow.setOptions({
+						map:map,
+						position:e.latLng,
+						//content:'Line->'+childKey
+						content: (infoContentReviewOther[0]),
+						maxwidth:400
+					});
+				});
+				
+
+				//###### remove marker #########/
+				var submitChanges  = infoContentReviewOther.find('button.submitChanges')[0];  
+				google.maps.event.addDomListener(submitChanges, "click", function(event) {
+					alert("Ok");
+				});
+
+				/*
+				// Open the InfoWindow on mouseover:
+				google.maps.event.addListener(polyline, 'mouseover', function(e) {
+					infoWindow.setPosition(e.latLng);
+					infoWindow.setContent("Διαδρομή: " + childData.name);
+					infoWindow.open(map);
+				});
+				// Close the InfoWindow on mouseout:
+				google.maps.event.addListener(polyline, 'mouseout', function() {
+					infoWindow.close();
+				});*/
+				polyline.setMap(map);
+				map.fitBounds(bounds);
+			});
+		});
+	});
+
+
+	var drawingManager = new google.maps.drawing.DrawingManager({
+	//drawingMode: google.maps.drawing.OverlayType.MARKER,
+		drawingControl: true,
+		drawingControlOptions: {
+			position: google.maps.ControlPosition.TOP_LEFT,
+			drawingModes: ['polyline']
+		},
+		polylineOptions: {
+			clickable: true,
+			editable: true,
+			zIndex: 1
+		}
+	});
+	drawingManager.setMap(map);
+		
+		
+		
+	google.maps.event.addListener(drawingManager, 'overlaycomplete', onOverlayComplete);
+	function onOverlayComplete(e) {
+		if(e == null || (e.type.length == 0 || e.type == null)) { return;  }
+		if (e.type == 'polyline') {
+			var path = e.overlay.getPath().getArray();
+			var user = firebase.auth().currentUser;
+			var ref = firebase.database().ref('StreetMarker');
+			ref.child('Users').orderByChild('userName').equalTo(user.email).on("value", function(snapshot) {
+					exists = (snapshot.val() !== null);
+			if (exists) {
+				//alert('user ' + user.email + ' exists!');
+				snapshot.forEach(function(Datadb) {
+					DataUsersKey = Datadb.key;
+				});
+				} else {
+				//alert('user ' + user.email + ' does not exist!');
+						DataUsersKey = firebase.database().ref('StreetMarker').child('Users').push().key;
+							firebase.database().ref('StreetMarker').child('Users/'+DataUsersKey).set({
+							userName:user.email,
+								point:0
+					});
+				};
+				
+				alert(DataUsersKey);
+				//alert( path.toString());
+				//alert(user.email);
+				data.coordinates =  path.toString();
+				data.createdByUser= user.email;
+				data.createdByUserId = DataUsersKey;
+				data.desciption='Description....';
+				data.name='name polyline';
+				data.ratingsCount=0;
+				data.totalRating=0;
+				data.type='Pedestrian';
+
+				var newPostKey = firebase.database().ref('StreetMarker').child('Paths').push().key;
+				firebase.database().ref('StreetMarker').child('Paths/'+newPostKey).set({
+					coordinates:data.coordinates,
+					createdByUser:data.createdByUser,
+					createdByUserId:data.createdByUserId,
+					desciption:data.desciption,
+					name:data.name,
+					ratingsCount:data.ratingsCount,
+					totalRating:data.totalRating,
+					type:data.type
+				}); //create path
+			}); //snapshot
+		}
+		//Others
+		if (e.type == 'circle') {
+			alert("Circle");
+		}
+	}
+
+	// Create the DIV to hold the control and call the CenterControl()
+	// constructor passing in this DIV.
+	var centerControlDiv = document.createElement('div');
+	var centerControl = new CenterControl(centerControlDiv, map);
+
+	centerControlDiv.index = 1;
+	map.controls[google.maps.ControlPosition.TOP_CENTER].push(centerControlDiv);
+	
+	var centerControlDivΒ = document.createElement('div');
+	var centerControlB = new CenterControlB(centerControlDivΒ, map);
+
+	centerControlDivΒ.index = 1;
+	map.controls[google.maps.ControlPosition.TOP_RIGHT].push(centerControlDivΒ);
+}
+
+});
+</script>
+
+	</head>
+  <body>
+    <div id="map"></div>
+  </body>
+</html>
